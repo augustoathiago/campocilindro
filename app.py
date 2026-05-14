@@ -297,16 +297,6 @@ with p1:
         b = 2.0
         st.session_state.b = 2.0
 
-        st.markdown(
-            """
-            <div class="small-note" style="margin-top:0.6rem; margin-bottom:0.35rem;">
-                Como <strong>a = 1,5 m</strong>, o raio externo fica automaticamente fixado em
-                <strong>b = 2,0 m</strong>.
-            </div>
-            """,
-            unsafe_allow_html=True,
-        )
-
         # Slider visível, mas desabilitado
         st.slider(
             "Raio externo b do cilindro (m)",
