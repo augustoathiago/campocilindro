@@ -110,9 +110,6 @@ def q_gauss_coeff_per_L(r: float, a: float, b: float, rho_c_m3: float) -> float:
       - r < a        -> 0
       - a <= r < b   -> ρ π (r² - a²)
       - r >= b       -> ρ π (b² - a²)
-
-    Para cilindro maciço (a = 0), as expressões são tratadas normalmente,
-    e as seções didáticas simplificam a apresentação.
     """
     if r < 0:
         return 0.0
@@ -308,27 +305,31 @@ with p1:
     b_max = 2.0
     b_min = round(min(a + 0.5, b_max), 2)
 
-    # CORREÇÃO DEFINITIVA PARA a = 1,5 m
-    # Não cria slider com min=max. Apenas fixa b=2,0.
+    # Mantém o slider de b visível mesmo quando a = 1,5 m
     if abs(b_min - b_max) < 1e-9:
         b = 2.0
         st.session_state.b = 2.0
+
         st.markdown(
             """
-            <div class="small-note" style="margin-top:0.6rem; margin-bottom:0.6rem;">
+            <div class="small-note" style="margin-top:0.6rem; margin-bottom:0.35rem;">
                 Como <strong>a = 1,5 m</strong>, o raio externo fica automaticamente fixado em
                 <strong>b = 2,0 m</strong>.
             </div>
             """,
             unsafe_allow_html=True,
         )
-        st.markdown(
-            """
-            <div class="small-note" style="margin-bottom:0.6rem;">
-                <strong>Raio externo b do cilindro (m): 2,0</strong>
-            </div>
-            """,
-            unsafe_allow_html=True,
+
+        # Slider visível, mas desabilitado
+        st.slider(
+            "Raio externo b do cilindro (m)",
+            min_value=0.0,
+            max_value=2.0,
+            value=2.0,
+            step=0.05,
+            disabled=True,
+            key="b_locked_visible",
+            help="b ficou travado em 2,0 m porque deve satisfazer b ≥ a + 0,5 m."
         )
     else:
         if st.session_state.b < b_min:
@@ -382,7 +383,7 @@ with p2:
     st.markdown('</div>', unsafe_allow_html=True)
 
 rho_c = rho_micro * 1e-6
-qg_coeff = q_gauss_coeff_per_L(r, a, b, rho_c)   # q_gauss / L
+qg_coeff = q_gauss_coeff_per_L(r, a, b, rho_c)
 E_r = electric_field(r, a, b, rho_c)
 
 # =========================================================
@@ -473,7 +474,6 @@ def build_svg(a, b, r, rho_c, E_r):
     sentido = "para fora" if E_r > 0 else "para dentro" if E_r < 0 else "nulo"
     field_text = f"E = {fmt_num(E_r)} N/C"
 
-    # Box do campo elétrico
     field_box_x = 930
     field_box_y = 145
     field_box_w = 300
@@ -492,7 +492,6 @@ def build_svg(a, b, r, rho_c, E_r):
     <text x="{field_box_x+14}" y="{field_box_y+108}" font-size="18" fill="#111827">Sentido: {sentido}</text>
     """
 
-    # Box da carga abaixo do campo - apenas ρ
     charge_box_x = field_box_x
     charge_box_y = field_box_y + field_box_h + 18
     charge_box_w = 300
@@ -852,14 +851,10 @@ st.markdown(
     """
     <div class="white-card black-text">
         <div class="small-note">
-            <strong>Correções desta versão:</strong>
+            <strong>Correção desta versão:</strong>
             <ul>
-                <li>O app não quebra quando <strong>a = 1,5 m</strong>.</li>
-                <li>O box do campo elétrico foi ajustado para caber o título em duas linhas.</li>
-                <li>O box da carga mostra somente <strong>ρ</strong>.</li>
-                <li>O vetor do campo elétrico foi removido da imagem.</li>
-                <li>A seção Lei de Gauss usa caracteres corretos: <strong>Φ</strong>, <strong>q<sub>int</sub></strong>, <strong>ε<sub>0</sub></strong>.</li>
-                <li>Se o cilindro for maciço (<strong>a = 0</strong>), as fórmulas de carga e campo não exibem <strong>a</strong>.</li>
+                <li>Quando <strong>a = 1,5 m</strong>, o slider de <strong>b</strong> continua visível.</li>
+                <li>Nesse caso, o slider fica <strong>travado em 2,0 m</strong> e desabilitado, para evitar confusão.</li>
             </ul>
         </div>
     </div>
