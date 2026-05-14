@@ -2,6 +2,7 @@ import math
 from pathlib import Path
 
 import numpy as np
+import plotly.graph_objects as go
 import streamlit as st
 import streamlit.components.v1 as components
 
@@ -99,7 +100,7 @@ def soft_fill(hex_color: str, alpha: float = 0.18) -> str:
 
 
 # =========================================================
-# FÍSICA - APENAS CILINDRO ISOLANTE
+# FÍSICA - CILINDRO ISOLANTE
 # =========================================================
 def q_gauss_coeff_per_L(r: float, a: float, b: float, rho_c_m3: float) -> float:
     """
@@ -140,7 +141,7 @@ def electric_field(r: float, a: float, b: float, rho_c_m3: float) -> float:
 
 
 # =========================================================
-# ESTILO
+# CSS
 # =========================================================
 st.markdown(
     """
@@ -304,7 +305,6 @@ with p1:
     b_max = 2.0
     b_min = round(min(a + 0.5, b_max), 2)
 
-    # Mantém o slider de b visível mesmo quando a = 1,5 m
     if abs(b_min - b_max) < 1e-9:
         b = 2.0
         st.session_state.b = 2.0
@@ -391,7 +391,7 @@ st.markdown('<div class="section-title">Imagem</div>', unsafe_allow_html=True)
 
 
 def build_svg(a, b, r, rho_c, E_r):
-    px_per_m = 120.0  # escala fixa
+    px_per_m = 120.0
 
     outer_r_px = max(10.0, b * px_per_m)
     inner_r_px = a * px_per_m
@@ -749,15 +749,26 @@ st.markdown('</div>', unsafe_allow_html=True)
 # =========================================================
 st.markdown('<div class="section-title">Gráfico</div>', unsafe_allow_html=True)
 
+# IMPORTANTE:
+# O erro do print estava em fig = go.Figure()
+# Nesta versão, go está corretamente importado no topo:
+# import plotly.graph_objects as go
+
 r_max_graph = 2.5
 rr = np.linspace(0.001, r_max_graph, 900)
-EE = np.array([electric_field(float(rv), a, b, rho_c) for rv in rr])
+EE = np.array([electric_field(float(rv), a, b, rho_c) for rv in rr], dtype=float)
 
-y_abs = np.nanmax(np.abs(EE)) if len(EE) > 0 else 1.0
-if y_abs < 1e-9:
+# Evita problemas quando todos os valores forem zero
+if EE.size == 0:
+    EE = np.array([0.0])
+
+y_abs = float(np.nanmax(np.abs(EE)))
+if not np.isfinite(y_abs) or y_abs < 1e-9:
     y_abs = 1.0
+
 y_margin = 0.12 * y_abs
 
+# Criação correta da figura Plotly
 fig = go.Figure()
 
 fig.add_trace(
@@ -855,12 +866,12 @@ st.markdown(
     """
     <div class="white-card black-text">
         <div class="small-note">
-            <strong>Melhoria desta versão:</strong>
+            <strong>Correção desta versão:</strong>
             <ul>
-                <li>No caso <strong>(i) superfície gaussiana fora do cilindro</strong>, agora também aparecem:</li>
-                <li>\(\rho = q_{gauss}/V_r\)</li>
-                <li>a fórmula de \(V_r\)</li>
-                <li>e a expressão \(\rho = q_{gauss}/(\text{fórmula de }V_r)\)</li>
+                <li>O gráfico foi corrigido.</li>
+                <li>O objeto <code>go</code> está corretamente importado como
+                <code>plotly.graph_objects as go</code>.</li>
+                <li>A criação da figura com <code>fig = go.Figure()</code> agora funciona normalmente.</li>
             </ul>
         </div>
     </div>
