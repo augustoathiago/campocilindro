@@ -20,7 +20,7 @@ EPSILON_0 = 8.8e-12  # conforme solicitado
 
 
 # =========================================================
-# FORMATAÇÃO
+# FUNÇÕES DE FORMATAÇÃO
 # =========================================================
 SUPERSCRIPTS = {
     "-": "⁻",
@@ -43,7 +43,7 @@ def exp_to_superscript(n: int) -> str:
 
 
 def fmt_num(x: float, digits: int = 4) -> str:
-    """Formata sem e/E."""
+    """Formata sem usar e/E."""
     if x is None or (isinstance(x, float) and (math.isnan(x) or math.isinf(x))):
         return "indefinido"
 
@@ -51,6 +51,7 @@ def fmt_num(x: float, digits: int = 4) -> str:
         return "0"
 
     ax = abs(x)
+
     if 1e-3 <= ax < 1e4:
         s = f"{x:.{digits}f}".rstrip("0").rstrip(".")
         return s
@@ -65,23 +66,19 @@ def fmt_num_unit(x: float, unit: str = "", digits: int = 4) -> str:
     return f"{fmt_num(x, digits)} {unit}".strip()
 
 
-def fmt_html(x: float, unit: str = "", digits: int = 4) -> str:
-    if x is None or (isinstance(x, float) and (math.isnan(x) or math.isinf(x))):
-        return f"indefinido {unit}".strip()
-
+def to_latex_num(x: float, digits: int = 4) -> str:
+    """Número em estilo LaTeX sem e/E."""
     if abs(x) < 1e-15:
-        return f"0 {unit}".strip()
+        return "0"
 
     ax = abs(x)
-
     if 1e-3 <= ax < 1e4:
-        s = f"{x:.{digits}f}".rstrip("0").rstrip(".")
-        return f"{s} {unit}".strip()
+        return f"{x:.{digits}f}".rstrip("0").rstrip(".")
 
     exp = int(math.floor(math.log10(ax)))
     mant = x / (10 ** exp)
-    s_mant = f"{mant:.{digits}f}".rstrip("0").rstrip(".")
-    return f"{s_mant} × 10<sup>{exp}</sup> {unit}".strip()
+    mant_str = f"{mant:.{digits}f}".rstrip("0").rstrip(".")
+    return rf"{mant_str}\times 10^{{{exp}}}"
 
 
 def charge_color(value: float) -> str:
@@ -103,32 +100,23 @@ def soft_fill(hex_color: str, alpha: float = 0.18) -> str:
 
 
 # =========================================================
-# FÍSICA
+# FÍSICA - CILINDRO ISOLANTE
 # =========================================================
 def lambda_equiv(rho_c_m3: float, a: float, b: float) -> float:
     """
-    Carga por unidade de comprimento equivalente:
+    Carga por unidade de comprimento:
     λ = ρ π (b² - a²)
-
-    Para condutor:
-    interpretamos ρ como densidade volumétrica equivalente para definir
-    a carga total por unidade de comprimento λ que, fisicamente, ficará
-    toda na superfície externa.
     """
     return rho_c_m3 * math.pi * (b**2 - a**2)
 
 
-def q_gauss_coeff_per_L(r: float, a: float, b: float, rho_c_m3: float, is_conductor: bool) -> float:
+def q_gauss_coeff_per_L(r: float, a: float, b: float, rho_c_m3: float) -> float:
     """
-    Retorna o coeficiente de q_gauss/L em C/m.
-    Assim:
-      q_gauss = [coeficiente] * L
+    Retorna q_gauss / L em C/m.
 
     Casos:
       - r < a            -> 0
-      - a <= r < b:
-          * condutor     -> 0
-          * isolante     -> ρ π (r² - a²)
+      - a <= r < b       -> ρ π (r² - a²)
       - r >= b           -> ρ π (b² - a²)
     """
     if r < 0:
@@ -138,36 +126,26 @@ def q_gauss_coeff_per_L(r: float, a: float, b: float, rho_c_m3: float, is_conduc
         return 0.0
 
     if a <= r < b:
-        if is_conductor:
-            return 0.0
         return rho_c_m3 * math.pi * (r**2 - a**2)
 
     return rho_c_m3 * math.pi * (b**2 - a**2)
 
 
-def electric_field(r: float, a: float, b: float, rho_c_m3: float, is_conductor: bool) -> float:
+def electric_field(r: float, a: float, b: float, rho_c_m3: float) -> float:
     """
     Campo elétrico assinado:
-      positivo -> radial para fora
-      negativo -> radial para dentro
+      positivo -> para fora
+      negativo -> para dentro
 
-    Como:
-      q_gauss = coef * L
-      A = 2πrL
-    então o L cancela.
+    q_gauss = [coef] * L
+    A = 2πrL
+    => L cancela
     """
     if r <= 0:
         return 0.0
 
-    q_coeff = q_gauss_coeff_per_L(r, a, b, rho_c_m3, is_conductor)  # C/m
+    q_coeff = q_gauss_coeff_per_L(r, a, b, rho_c_m3)  # C/m
     return q_coeff / (2 * math.pi * r * EPSILON_0)
-
-
-def rho_to_total_Q_symbolic(rho_c_m3: float, a: float, b: float) -> float:
-    """
-    Apenas para exibir λ = Q/L = ρ π (b²-a²)
-    """
-    return lambda_equiv(rho_c_m3, a, b)
 
 
 # =========================================================
@@ -217,17 +195,6 @@ st.markdown(
             margin-bottom: 0.8rem;
         }
 
-        .formula-card {
-            background: #ffffff;
-            border: 1px solid #d1d5db;
-            border-left: 5px solid #2563eb;
-            border-radius: 14px;
-            padding: 0.95rem 1rem;
-            color: #111827 !important;
-            margin-bottom: 0.8rem;
-            overflow-wrap: anywhere;
-        }
-
         .slider-card {
             background: linear-gradient(180deg, #eff6ff 0%, #ffffff 100%);
             border: 2px solid #60a5fa;
@@ -238,39 +205,38 @@ st.markdown(
             box-shadow: 0 6px 18px rgba(37, 99, 235, 0.08);
         }
 
+        .formula-shell {
+            background: #ffffff;
+            border: 1px solid #d1d5db;
+            border-left: 5px solid #2563eb;
+            border-radius: 14px;
+            padding: 1rem 1rem;
+            color: #111827 !important;
+            margin-bottom: 1rem;
+            box-shadow: 0 4px 12px rgba(0,0,0,0.03);
+        }
+
         .small-note {
             color: #4b5563;
             font-size: 0.95rem;
-        }
-
-        .equation {
-            font-size: 1.03rem;
-            line-height: 1.8;
-            color: #111827 !important;
         }
 
         .black-text * {
             color: #111827 !important;
         }
 
-        /* Corrige textos claros sumindo em parâmetros */
-        label, p, div, span {
-            color: inherit;
-        }
-
+        /* Corrige fontes claras sumindo */
         [data-testid="stWidgetLabel"] p,
         [data-testid="stMarkdownContainer"] p,
         .stSlider label,
-        .stRadio label,
         .stToggle label,
-        .stSelectbox label,
-        .stNumberInput label {
+        .stRadio label {
             color: #111827 !important;
         }
 
         .stSlider > div > div,
-        .stRadio > div,
-        .stToggle > div {
+        .stToggle > div,
+        .stRadio > div {
             color: #111827 !important;
         }
     </style>
@@ -305,13 +271,9 @@ st.markdown(
     """
     <div class="white-card black-text">
         <div class="small-note">
-            Nesta versão, o simulador usa a <strong>densidade volumétrica de carga ρ</strong>.
-            Assim, o cálculo do campo elétrico fica independente do comprimento
-            porque o fator <strong>L</strong> cancela entre a carga contida e a área da superfície gaussiana.
-            <br><br>
-            <strong>No caso condutor</strong>, ρ é tratado como uma <strong>densidade volumétrica equivalente</strong>
-            apenas para definir a carga por unidade de comprimento
-            <strong>λ = ρπ(b² − a²)</strong>, que fisicamente fica toda na superfície externa.
+            Nesta versão, consideramos <strong>apenas cilindro isolante</strong>.
+            O simulador usa a <strong>densidade volumétrica de carga ρ</strong>, então o fator
+            <strong>L</strong> cancela no cálculo do campo elétrico pela Lei de Gauss.
         </div>
     </div>
     """,
@@ -322,7 +284,7 @@ st.markdown(
 # ESTADO
 # =========================================================
 if "a" not in st.session_state:
-    st.session_state.a = 0.4
+    st.session_state.a = 0.45
 
 if "b" not in st.session_state:
     st.session_state.b = 1.0
@@ -332,14 +294,6 @@ if "rho_micro" not in st.session_state:
 
 if "r" not in st.session_state:
     st.session_state.r = 0.8
-
-a = float(st.session_state.a)
-b_min = round(a + 0.5, 2)
-b_max = 2.0
-if st.session_state.b < b_min:
-    st.session_state.b = b_min
-if st.session_state.b > b_max:
-    st.session_state.b = b_max
 
 # =========================================================
 # PARÂMETROS
@@ -361,23 +315,46 @@ with p1:
         help="Pode ser zero para cilindro maciço."
     )
 
-    b_min = round(a + 0.5, 2)
     b_max = 2.0
+    b_min = round(min(a + 0.5, b_max), 2)
 
-    if st.session_state.b < b_min:
-        st.session_state.b = b_min
-    if st.session_state.b > b_max:
-        st.session_state.b = b_max
+    # Correção robusta para o caso a = 1,5 m
+    if b_min >= b_max - 1e-9:
+        b = 2.0
+        st.session_state.b = 2.0
+        st.markdown(
+            f"""
+            <div class="small-note" style="margin-top:0.6rem; margin-bottom:0.6rem;">
+                Como a = {fmt_num_unit(a, "m")}, o raio externo fica automaticamente fixado em
+                <strong>b = 2,0 m</strong> para garantir b ≥ a + 0,5 m e b ≤ 2,0 m.
+            </div>
+            """,
+            unsafe_allow_html=True,
+        )
+        st.slider(
+            "Raio externo b do cilindro (m)",
+            min_value=2.0,
+            max_value=2.0,
+            value=2.0,
+            step=0.05,
+            disabled=True,
+            key="b_fixed_visual"
+        )
+    else:
+        if st.session_state.b < b_min:
+            st.session_state.b = b_min
+        if st.session_state.b > b_max:
+            st.session_state.b = b_max
 
-    b = st.slider(
-        "Raio externo b do cilindro (m)",
-        min_value=float(b_min),
-        max_value=float(b_max),
-        value=float(st.session_state.b),
-        step=0.05,
-        key="b",
-        help="O app garante sempre b ≥ a + 0,5 m e b ≤ 2,0 m."
-    )
+        b = st.slider(
+            "Raio externo b do cilindro (m)",
+            min_value=float(b_min),
+            max_value=float(b_max),
+            value=float(st.session_state.b),
+            step=0.05,
+            key="b",
+            help="O app garante sempre b ≥ a + 0,5 m e b ≤ 2,0 m."
+        )
 
     rho_micro = st.slider(
         "Densidade volumétrica de carga ρ (microC/m³)",
@@ -387,14 +364,6 @@ with p1:
         step=0.1,
         key="rho_micro",
     )
-
-    material = st.radio(
-        "Material do cilindro",
-        options=["Isolante", "Condutor"],
-        horizontal=False,
-    )
-
-    is_conductor = material == "Condutor"
 
     st.markdown('</div>', unsafe_allow_html=True)
 
@@ -424,15 +393,8 @@ with p2:
 
 rho_c = rho_micro * 1e-6
 lambda_eq = lambda_equiv(rho_c, a, b)
-qg_coeff = q_gauss_coeff_per_L(r, a, b, rho_c, is_conductor)  # qgauss/L
-E_r = electric_field(r, a, b, rho_c, is_conductor)
-
-if is_conductor:
-    lambda_int = 0.0
-    lambda_ext = lambda_eq
-else:
-    lambda_int = None
-    lambda_ext = None
+qg_coeff = q_gauss_coeff_per_L(r, a, b, rho_c)   # q_gauss / L
+E_r = electric_field(r, a, b, rho_c)
 
 # =========================================================
 # IMAGEM
@@ -440,7 +402,7 @@ else:
 st.markdown('<div class="section-title">Imagem</div>', unsafe_allow_html=True)
 
 
-def build_svg(a, b, r, rho_c, lambda_eq, E_r, is_conductor, lambda_int, lambda_ext):
+def build_svg(a, b, r, rho_c, lambda_eq, E_r):
     px_per_m = 120.0  # escala fixa
 
     outer_r_px = max(10.0, b * px_per_m)
@@ -451,69 +413,56 @@ def build_svg(a, b, r, rho_c, lambda_eq, E_r, is_conductor, lambda_int, lambda_e
     x_back = 860
     y_c = 280
 
-    svg_w = int(max(1550, x_back + 330))
-    svg_h = int(max(660, y_c + max(outer_r_px, gauss_r_px) + 190))
+    svg_w = int(max(1550, x_back + 380))
+    svg_h = int(max(680, y_c + max(outer_r_px, gauss_r_px) + 200))
 
     sign_color = charge_color(rho_c)
     ext_color = sign_color
-    int_color = charge_color(0.0) if is_conductor else sign_color
-
+    int_color = sign_color
     ext_fill = soft_fill(ext_color, 0.18)
+
     gauss_color = "#16a34a"
     field_color = "#111827"
     gray = "#111827"
 
-    # vetor no meio da superfície gaussiana
-    # escolhemos o ponto médio ao longo do comprimento, na parte superior da superfície cilíndrica.
-    x_vec = (x_front + x_back) / 2
-    y_vec = y_c - gauss_r_px
+    # Vetor do campo: no meio do cilindro gaussiano, na horizontal
+    x_center = (x_front + x_back) / 2
+    y_arrow = y_c
+    arrow_half = 55
 
-    arrow_len = 85
     if abs(E_r) < 1e-18:
         arrow_svg = ""
         sentido = "nulo"
-        field_text = f"E = 0 N/C"
+        field_text = "E = 0 N/C"
     else:
-        outward = E_r > 0
-        # na parte superior, sentido "para fora" = para cima
-        if outward:
-            x2 = x_vec
-            y2 = y_vec - arrow_len
+        if E_r > 0:
+            # para fora -> direita
+            x1 = x_center - arrow_half
+            x2 = x_center + arrow_half
             head = f"""
-            <line x1="{x2}" y1="{y2}" x2="{x2-6}" y2="{y2+12}" stroke="{field_color}" stroke-width="3"/>
-            <line x1="{x2}" y1="{y2}" x2="{x2+6}" y2="{y2+12}" stroke="{field_color}" stroke-width="3"/>
+            <line x1="{x2}" y1="{y_arrow}" x2="{x2-12}" y2="{y_arrow-6}" stroke="{field_color}" stroke-width="3"/>
+            <line x1="{x2}" y1="{y_arrow}" x2="{x2-12}" y2="{y_arrow+6}" stroke="{field_color}" stroke-width="3"/>
             """
             sentido = "para fora"
         else:
-            x2 = x_vec
-            y2 = y_vec + arrow_len
+            # para dentro -> esquerda
+            x1 = x_center + arrow_half
+            x2 = x_center - arrow_half
             head = f"""
-            <line x1="{x2}" y1="{y2}" x2="{x2-6}" y2="{y2-12}" stroke="{field_color}" stroke-width="3"/>
-            <line x1="{x2}" y1="{y2}" x2="{x2+6}" y2="{y2-12}" stroke="{field_color}" stroke-width="3"/>
+            <line x1="{x2}" y1="{y_arrow}" x2="{x2+12}" y2="{y_arrow-6}" stroke="{field_color}" stroke-width="3"/>
+            <line x1="{x2}" y1="{y_arrow}" x2="{x2+12}" y2="{y_arrow+6}" stroke="{field_color}" stroke-width="3"/>
             """
             sentido = "para dentro"
 
         arrow_svg = f"""
-        <line x1="{x_vec}" y1="{y_vec}" x2="{x2}" y2="{y2}" stroke="{field_color}" stroke-width="3"/>
+        <line x1="{x1}" y1="{y_arrow}" x2="{x2}" y2="{y_arrow}" stroke="{field_color}" stroke-width="3"/>
         {head}
         """
         field_text = f"E = {fmt_num(E_r)} N/C"
 
-    # caixas
-    info_box_x = 18
-    info_box_y = 20
-    info_box_w = 370
-    info_box_h = 150 if not is_conductor else 190
-
-    field_box_x = 930
-    field_box_y = 165
-    field_box_w = 360
-    field_box_h = 120
-
     def radius_dimension(x, radius, label):
         """
-        Cota de RAIO, não diâmetro:
-        vai do centro até a borda superior.
+        Cota de RAIO: do centro até a borda superior.
         """
         y1 = y_c
         y2 = y_c - radius
@@ -571,25 +520,11 @@ def build_svg(a, b, r, rho_c, lambda_eq, E_r, is_conductor, lambda_int, lambda_e
                  fill="none" stroke="{gauss_color}" stroke-width="3" stroke-dasharray="10 8"/>
         """
 
-    # box esquerdo: rho e lambda
-    lines = [
-        ("ρ =", fmt_num_unit(rho_c, "C/m³"), charge_color(rho_c)),
-        ("λ =", fmt_num_unit(lambda_eq, "C/m"), charge_color(lambda_eq)),
-    ]
-    if is_conductor:
-        lines.append(("λint =", fmt_num_unit(lambda_int, "C/m"), charge_color(lambda_int)))
-        lines.append(("λext =", fmt_num_unit(lambda_ext, "C/m"), charge_color(lambda_ext)))
-
-    info_text = f'<text x="{info_box_x+14}" y="{info_box_y+30}" font-size="18" font-weight="800" fill="#111827">Densidade e carga por unidade de comprimento</text>'
-    for i, (lab, val, col) in enumerate(lines):
-        yy = info_box_y + 58 + i * 25
-        info_text += f'<text x="{info_box_x+14}" y="{yy}" font-size="18" font-weight="700" fill="{col}">{lab} {val}</text>'
-
-    info_box_svg = f"""
-    <rect x="{info_box_x}" y="{info_box_y}" width="{info_box_w}" height="{info_box_h}"
-          rx="14" ry="14" fill="#ffffff" stroke="#d1d5db" stroke-width="2"/>
-    {info_text}
-    """
+    # box do campo
+    field_box_x = 910
+    field_box_y = 150
+    field_box_w = 350
+    field_box_h = 120
 
     field_box_svg = f"""
     <rect x="{field_box_x}" y="{field_box_y}" width="{field_box_w}" height="{field_box_h}"
@@ -599,6 +534,26 @@ def build_svg(a, b, r, rho_c, lambda_eq, E_r, is_conductor, lambda_int, lambda_e
     </text>
     <text x="{field_box_x+14}" y="{field_box_y+58}" font-size="18" fill="#111827">{field_text}</text>
     <text x="{field_box_x+14}" y="{field_box_y+88}" font-size="18" fill="#111827">Sentido: {sentido}</text>
+    """
+
+    # box da carga abaixo do box do campo
+    charge_box_x = field_box_x
+    charge_box_y = field_box_y + field_box_h + 18
+    charge_box_w = 350
+    charge_box_h = 105
+
+    charge_box_svg = f"""
+    <rect x="{charge_box_x}" y="{charge_box_y}" width="{charge_box_w}" height="{charge_box_h}"
+          rx="14" ry="14" fill="#ffffff" stroke="#d1d5db" stroke-width="2"/>
+    <text x="{charge_box_x+14}" y="{charge_box_y+28}" font-size="18" font-weight="800" fill="#111827">
+        Carga
+    </text>
+    <text x="{charge_box_x+14}" y="{charge_box_y+58}" font-size="18" font-weight="700" fill="{charge_color(rho_c)}">
+        ρ = {fmt_num_unit(rho_c, "C/m³")}
+    </text>
+    <text x="{charge_box_x+14}" y="{charge_box_y+86}" font-size="18" font-weight="700" fill="{charge_color(lambda_eq)}">
+        λ = {fmt_num_unit(lambda_eq, "C/m")}
+    </text>
     """
 
     params_text = f"""
@@ -651,8 +606,8 @@ def build_svg(a, b, r, rho_c, lambda_eq, E_r, is_conductor, lambda_int, lambda_e
             {gauss_svg}
             {arrow_svg}
 
-            {info_box_svg}
             {field_box_svg}
+            {charge_box_svg}
 
             {params_text}
         </svg>
@@ -670,9 +625,6 @@ svg_html, svg_height = build_svg(
     rho_c=rho_c,
     lambda_eq=lambda_eq,
     E_r=E_r,
-    is_conductor=is_conductor,
-    lambda_int=lambda_int,
-    lambda_ext=lambda_ext,
 )
 
 components.html(svg_html, height=svg_height, scrolling=True)
@@ -681,219 +633,127 @@ components.html(svg_html, height=svg_height, scrolling=True)
 # LEI DE GAUSS
 # =========================================================
 st.markdown('<div class="section-title">Lei de Gauss</div>', unsafe_allow_html=True)
+st.markdown('<div class="formula-shell">', unsafe_allow_html=True)
 st.markdown(
     """
-    <div class="formula-card black-text">
-        <div class="equation">
-            <strong>Φ = ∮ E · dA = q<sub>int</sub> / ε<sub>0</sub></strong><br>
-            Φ é o fluxo elétrico na superfície gaussiana, E é o campo elétrico,
-            A é a área da superfície gaussiana, q<sub>int</sub> é a carga contida
-            na superfície gaussiana e ε<sub>0</sub> é a permissividade do vácuo
-            = 8,8 × 10<sup>-12</sup> C²/N·m².
-        </div>
-    </div>
+    **Lei de Gauss:**
+
+    O fluxo elétrico através da superfície gaussiana é dado por:
     """,
     unsafe_allow_html=True,
 )
+st.latex(r"\Phi = \oint \vec{E}\cdot d\vec{A} = \frac{q_{int}}{\varepsilon_0}")
+st.markdown(
+    """
+    - \(\Phi\): fluxo elétrico  
+    - \(E\): campo elétrico  
+    - \(A\): área da superfície gaussiana  
+    - \(q_{int}\): carga dentro da superfície gaussiana  
+    - \(\varepsilon_0 = 8{,}8\times10^{-12}\ \mathrm{C^2/(N\cdot m^2)}\)
+    """,
+    unsafe_allow_html=True,
+)
+st.markdown('</div>', unsafe_allow_html=True)
 
 # =========================================================
 # CARGA q_gauss
 # =========================================================
 st.markdown('<div class="section-title">Carga q<sub>gauss</sub> contida na superfície gaussiana</div>', unsafe_allow_html=True)
+st.markdown('<div class="formula-shell">', unsafe_allow_html=True)
 
 if r >= b:
-    st.markdown(
-        f"""
-        <div class="formula-card black-text">
-            <div class="equation">
-                <strong>(i) Se a superfície gaussiana estiver fora do cilindro</strong><br><br>
-
-                q<sub>gauss</sub> = ρ · π (b² − a²) L<br><br>
-
-                q<sub>gauss</sub> = ({fmt_html(rho_c, "C/m³")}) · π · ({fmt_html(b**2, "m²")} − {fmt_html(a**2, "m²")}) · L<br><br>
-
-                <strong>q<sub>gauss</sub> = {fmt_html(qg_coeff, "C/m")} · L</strong>
-            </div>
-        </div>
-        """,
-        unsafe_allow_html=True,
+    st.markdown("**(i) Se a superfície gaussiana estiver fora do cilindro**")
+    st.latex(r"q_{gauss}=\rho\,\pi\,(b^2-a^2)\,L")
+    st.latex(
+        rf"q_{{gauss}}=({to_latex_num(rho_c)})\,\pi\,({to_latex_num(b**2)}-{to_latex_num(a**2)})\,L"
+    )
+    st.latex(
+        rf"q_{{gauss}}=({to_latex_num(qg_coeff)}\ \mathrm{{C/m}})\,L"
     )
 
 elif r < a:
-    if is_conductor:
-        st.markdown(
-            """
-            <div class="formula-card black-text">
-                <div class="equation">
-                    <strong>(ii) Se a superfície gaussiana estiver dentro do cilindro condutor</strong><br><br>
-                    q<sub>gauss</sub> = 0 (sem carga dentro do cilindro)
-                </div>
-            </div>
-            """,
-            unsafe_allow_html=True,
-        )
-    else:
-        st.markdown(
-            """
-            <div class="formula-card black-text">
-                <div class="equation">
-                    Para r &lt; a, a superfície gaussiana está na cavidade interna.<br>
-                    Portanto, q<sub>gauss</sub> = 0.
-                </div>
-            </div>
-            """,
-            unsafe_allow_html=True,
-        )
+    st.markdown("**(ii) Se a superfície gaussiana estiver na cavidade interna**")
+    st.latex(r"q_{gauss}=0")
 
 else:
-    if is_conductor:
-        st.markdown(
-            """
-            <div class="formula-card black-text">
-                <div class="equation">
-                    <strong>(iv) Se a superfície gaussiana estiver no meio da espessura do cilindro condutor</strong><br><br>
-                    q<sub>gauss</sub> = 0 (toda a carga está na superfície externa do condutor)
-                </div>
-            </div>
-            """,
-            unsafe_allow_html=True,
-        )
-    else:
-        st.markdown(
-            f"""
-            <div class="formula-card black-text">
-                <div class="equation">
-                    <strong>(iii) Se a superfície gaussiana estiver no meio da espessura do cilindro isolante</strong><br><br>
+    st.markdown("**(iii) Se a superfície gaussiana estiver no meio da espessura do cilindro isolante**")
+    st.latex(r"\rho=\frac{q_{gauss}}{V_r}")
+    st.markdown("onde o volume dentro da superfície gaussiana é:")
+    st.latex(r"V_r=\pi\,(r^2-a^2)\,L")
+    st.latex(r"\rho=\frac{q_{gauss}}{\pi\,(r^2-a^2)\,L}")
+    st.latex(r"q_{gauss}=\rho\,\pi\,(r^2-a^2)\,L")
+    st.latex(
+        rf"q_{{gauss}}=({to_latex_num(rho_c)})\,\pi\,({to_latex_num(r**2)}-{to_latex_num(a**2)})\,L"
+    )
+    st.latex(
+        rf"q_{{gauss}}=({to_latex_num(qg_coeff)}\ \mathrm{{C/m}})\,L"
+    )
 
-                    ρ = q<sub>gauss</sub> / V<sub>r</sub>, sendo V o volume.<br><br>
-
-                    ρ = q<sub>gauss</sub> / [π (r² − a²) L]<br><br>
-
-                    q<sub>gauss</sub> = ρ π (r² − a²) L<br><br>
-
-                    q<sub>gauss</sub> = ({fmt_html(rho_c, "C/m³")}) · π · ({fmt_html(r**2, "m²")} − {fmt_html(a**2, "m²")}) · L<br><br>
-
-                    <strong>q<sub>gauss</sub> = {fmt_html(qg_coeff, "C/m")} · L</strong>
-                </div>
-            </div>
-            """,
-            unsafe_allow_html=True,
-        )
+st.markdown('</div>', unsafe_allow_html=True)
 
 # =========================================================
 # ÁREA
 # =========================================================
 st.markdown('<div class="section-title">Área da superfície gaussiana</div>', unsafe_allow_html=True)
+st.markdown('<div class="formula-shell">', unsafe_allow_html=True)
 
 if r > 0:
-    coeff_area = 2 * math.pi * r
-    st.markdown(
-        f"""
-        <div class="formula-card black-text">
-            <div class="equation">
-                A = 2πrL<br><br>
-                A = 2π · {fmt_html(r, "m")} · L<br><br>
-                <strong>A = {fmt_html(coeff_area, "m")} · L</strong>
-            </div>
-        </div>
-        """,
-        unsafe_allow_html=True,
-    )
+    area_coeff = 2 * math.pi * r
+    st.latex(r"A=2\pi rL")
+    st.latex(rf"A=2\pi\,({to_latex_num(r)})\,L")
+    st.latex(rf"A=({to_latex_num(area_coeff)}\ \mathrm{{m}})\,L")
 else:
-    st.markdown(
-        """
-        <div class="formula-card black-text">
-            <div class="equation">
-                Para r = 0, a área da superfície gaussiana cilíndrica não é definida.
-            </div>
-        </div>
-        """,
-        unsafe_allow_html=True,
-    )
+    st.markdown("Para \(r=0\), a área da superfície gaussiana cilíndrica não é definida.")
+
+st.markdown('</div>', unsafe_allow_html=True)
 
 # =========================================================
 # CAMPO ELÉTRICO
 # =========================================================
 st.markdown('<div class="section-title">Campo elétrico</div>', unsafe_allow_html=True)
+st.markdown('<div class="formula-shell">', unsafe_allow_html=True)
 
 if r > 0:
     if r >= b:
-        field_html = f"""
-        <div class="equation">
-            Lei de Gauss no caso de simetria: campo constante E em toda superfície gaussiana
-            e sempre paralelo ao vetor área.<br><br>
+        st.markdown("**Se a superfície gaussiana estiver fora do cilindro**")
+        st.latex(r"E\,A=\frac{q_{gauss}}{\varepsilon_0}")
+        st.latex(r"E\,(2\pi rL)=\frac{\rho\pi(b^2-a^2)L}{\varepsilon_0}")
+        st.latex(r"E=\frac{\rho\pi(b^2-a^2)L}{2\pi rL\,\varepsilon_0}")
+        st.latex(r"E=\frac{\rho\,(b^2-a^2)}{2r\,\varepsilon_0}")
+        st.latex(
+            rf"E=\frac{{({to_latex_num(rho_c)})\,({to_latex_num(b**2)}-{to_latex_num(a**2)})}}{{2\,({to_latex_num(r)})\,(8.8\times10^{{-12}})}}"
+        )
+        st.latex(rf"E={to_latex_num(E_r)}\ \mathrm{{N/C}}")
 
-            E A = q<sub>gauss</sub> / ε<sub>0</sub><br><br>
-
-            E · (2πrL) = [ρπ(b² − a²)L] / ε<sub>0</sub><br><br>
-
-            E = [ρπ(b² − a²)L] / [2πrLε<sub>0</sub>]<br><br>
-
-            E = ρ (b² − a²) / (2rε<sub>0</sub>)<br><br>
-
-            E = ({fmt_html(rho_c, "C/m³")}) · ({fmt_html(b**2, "m²")} − {fmt_html(a**2, "m²")})
-            / [2 · {fmt_html(r, "m")} · 8,8 × 10<sup>-12</sup> C²/N·m²]<br><br>
-
-            <strong>E = {fmt_html(E_r, "N/C")}</strong>
-        </div>
-        """
     elif r < a:
-        field_html = """
-        <div class="equation">
-            E A = q<sub>gauss</sub> / ε<sub>0</sub><br><br>
-            Como q<sub>gauss</sub> = 0, então:<br><br>
-            <strong>E = 0 N/C</strong>
-        </div>
-        """
+        st.markdown("**Se a superfície gaussiana estiver na cavidade interna**")
+        st.latex(r"q_{gauss}=0")
+        st.latex(r"E=0")
+
     else:
-        if is_conductor:
-            field_html = """
-            <div class="equation">
-                E A = q<sub>gauss</sub> / ε<sub>0</sub><br><br>
-                Como q<sub>gauss</sub> = 0, então:<br><br>
-                <strong>E = 0 N/C</strong>
-            </div>
-            """
-        else:
-            field_html = f"""
-            <div class="equation">
-                Lei de Gauss no caso de simetria: campo constante E em toda superfície gaussiana
-                e sempre paralelo ao vetor área.<br><br>
-
-                E A = q<sub>gauss</sub> / ε<sub>0</sub><br><br>
-
-                E · (2πrL) = [ρπ(r² − a²)L] / ε<sub>0</sub><br><br>
-
-                E = [ρπ(r² − a²)L] / [2πrLε<sub>0</sub>]<br><br>
-
-                E = ρ (r² − a²) / (2rε<sub>0</sub>)<br><br>
-
-                E = ({fmt_html(rho_c, "C/m³")}) · ({fmt_html(r**2, "m²")} − {fmt_html(a**2, "m²")})
-                / [2 · {fmt_html(r, "m")} · 8,8 × 10<sup>-12</sup> C²/N·m²]<br><br>
-
-                <strong>E = {fmt_html(E_r, "N/C")}</strong>
-            </div>
-            """
+        st.markdown("**Se a superfície gaussiana estiver no meio da espessura do cilindro isolante**")
+        st.latex(r"E\,A=\frac{q_{gauss}}{\varepsilon_0}")
+        st.latex(r"E\,(2\pi rL)=\frac{\rho\pi(r^2-a^2)L}{\varepsilon_0}")
+        st.latex(r"E=\frac{\rho\pi(r^2-a^2)L}{2\pi rL\,\varepsilon_0}")
+        st.latex(r"E=\frac{\rho\,(r^2-a^2)}{2r\,\varepsilon_0}")
+        st.latex(
+            rf"E=\frac{{({to_latex_num(rho_c)})\,({to_latex_num(r**2)}-{to_latex_num(a**2)})}}{{2\,({to_latex_num(r)})\,(8.8\times10^{{-12}})}}"
+        )
+        st.latex(rf"E={to_latex_num(E_r)}\ \mathrm{{N/C}}")
 
     st.markdown(
         f"""
-        <div class="formula-card black-text">
-            {field_html}
+        <div class="small-note" style="margin-top:0.4rem;">
+            Sentido do campo neste ponto:
+            <strong>{'para fora' if E_r > 0 else 'para dentro' if E_r < 0 else 'nulo'}</strong>.
         </div>
         """,
         unsafe_allow_html=True,
     )
 else:
-    st.markdown(
-        """
-        <div class="formula-card black-text">
-            <div class="equation">
-                Para r = 0, o app exibe o campo como 0 por convenção visual no eixo.
-            </div>
-        </div>
-        """,
-        unsafe_allow_html=True,
-    )
+    st.markdown("Para \(r=0\), o app exibe o campo como 0 por convenção visual no eixo.")
+
+st.markdown('</div>', unsafe_allow_html=True)
 
 # =========================================================
 # GRÁFICO
@@ -902,7 +762,7 @@ st.markdown('<div class="section-title">Gráfico</div>', unsafe_allow_html=True)
 
 r_max_graph = 2.5
 rr = np.linspace(0.001, r_max_graph, 900)
-EE = np.array([electric_field(float(rv), a, b, rho_c, is_conductor) for rv in rr])
+EE = np.array([electric_field(float(rv), a, b, rho_c) for rv in rr])
 
 y_abs = np.nanmax(np.abs(EE)) if len(EE) > 0 else 1.0
 if y_abs < 1e-9:
@@ -1006,14 +866,13 @@ st.markdown(
     """
     <div class="white-card black-text">
         <div class="small-note">
-            <strong>Observações desta versão:</strong>
+            <strong>Correções desta versão:</strong>
             <ul>
-                <li>O slider de <strong>L</strong> foi removido.</li>
-                <li>O campo elétrico agora é calculado a partir de <strong>ρ</strong>.</li>
-                <li>Para <strong>condutor</strong>, a carga fica toda na superfície externa.</li>
-                <li>As cotas <strong>a</strong> e <strong>b</strong> na imagem representam <strong>raios</strong>.</li>
-                <li>O vetor do campo foi movido para o meio da superfície gaussiana.</li>
-                <li>O gráfico continua com ajuste automático de eixos, mas sem permitir zoom manual.</li>
+                <li>Somente cilindro isolante.</li>
+                <li>Erro com a = 1,5 m corrigido.</li>
+                <li>Vetor do campo elétrico no meio do cilindro gaussiano, horizontal.</li>
+                <li>Box da carga movido para baixo do box do campo elétrico.</li>
+                <li>Seções de fórmulas reescritas com <code>st.latex()</code>, evitando HTML aparecendo como texto.</li>
             </ul>
         </div>
     </div>
