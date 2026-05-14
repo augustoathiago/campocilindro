@@ -254,19 +254,6 @@ with col_title:
     st.markdown('<div class="main-title">Simulador Campo Elétrico Cilindro</div>', unsafe_allow_html=True)
     st.markdown('<div class="main-subtitle">Estude o campo elétrico de um cilindro longo.</div>', unsafe_allow_html=True)
 
-st.markdown(
-    """
-    <div class="white-card black-text">
-        <div class="small-note">
-            Nesta versão, consideramos <strong>apenas cilindro isolante</strong>.
-            O simulador usa a <strong>densidade volumétrica de carga ρ</strong>, então o fator
-            <strong>L</strong> cancela no cálculo do campo elétrico pela Lei de Gauss.
-        </div>
-    </div>
-    """,
-    unsafe_allow_html=True,
-)
-
 # =========================================================
 # ESTADO
 # =========================================================
@@ -308,16 +295,6 @@ with p1:
     if abs(b_min - b_max) < 1e-9:
         b = 2.0
         st.session_state.b = 2.0
-
-        st.markdown(
-            """
-            <div class="small-note" style="margin-top:0.6rem; margin-bottom:0.35rem;">
-                Como <strong>a = 1,5 m</strong>, o raio externo fica automaticamente fixado em
-                <strong>b = 2,0 m</strong>.
-            </div>
-            """,
-            unsafe_allow_html=True,
-        )
 
         st.slider(
             "Raio externo b do cilindro (m)",
@@ -370,14 +347,7 @@ with p2:
         step=0.01,
         key="r",
     )
-    st.markdown(
-        """
-        <div class="small-note">
-            Faixa limitada de 0 até 2,5 m.
-        </div>
-        """,
-        unsafe_allow_html=True,
-    )
+
     st.markdown('</div>', unsafe_allow_html=True)
 
 rho_c = rho_micro * 1e-6
@@ -586,13 +556,13 @@ st.markdown(
     <div class="formula-shell">
         <p><strong>Lei de Gauss:</strong></p>
         <p style="font-size:1.08rem; margin-bottom:0.7rem;">
-            <strong>Φ = ∮ E · dA = q<sub>int</sub> / ε<sub>0</sub></strong>
+            <strong>Φ = ∮ E · dA = q<sub>gauss</sub> / ε<sub>0</sub></strong>
         </p>
         <ul style="line-height:1.8; margin-top:0.3rem;">
             <li><strong>Φ</strong>: fluxo elétrico</li>
             <li><strong>E</strong>: campo elétrico</li>
             <li><strong>A</strong>: área da superfície gaussiana</li>
-            <li><strong>q<sub>int</sub></strong>: carga dentro da superfície gaussiana</li>
+            <li><strong>q<sub>gauss</sub></strong>: carga dentro da superfície gaussiana</li>
             <li><strong>ε<sub>0</sub></strong> = 8,8 × 10<sup>-12</sup> C²/(N·m²)</li>
         </ul>
     </div>
@@ -607,13 +577,15 @@ st.markdown('<div class="section-title">Carga q<sub>gauss</sub> contida na super
 st.markdown('<div class="formula-shell">', unsafe_allow_html=True)
 
 if r >= b:
-    st.markdown("**(i) Se a superfície gaussiana estiver fora do cilindro**")
+    st.markdown("**Caso de superfície gaussiana fora do cilindro, englobando toda carga:**")
 
     st.latex(r"\rho=\frac{q_{gauss}}{V_r}")
 
     if abs(a) < 1e-12:
         st.latex(r"V_r=\pi\,b^2\,L")
+        st.write("")
         st.latex(r"\rho=\frac{q_{gauss}}{\pi\,b^2\,L}")
+        st.write("")
         st.latex(r"q_{gauss}=\rho\,\pi\,b^2\,L")
         st.latex(
             rf"q_{{gauss}}=({to_latex_num(rho_c)})\,\pi\,({to_latex_num(b**2)})\,L"
@@ -684,7 +656,6 @@ st.markdown('<div class="formula-shell">', unsafe_allow_html=True)
 
 if r > 0:
     if r >= b:
-        st.markdown("**Se a superfície gaussiana estiver fora do cilindro**")
         st.latex(r"E\,A=\frac{q_{gauss}}{\varepsilon_0}")
 
         if abs(a) < 1e-12:
@@ -858,23 +829,3 @@ graph_config = {
 }
 
 st.plotly_chart(fig, use_container_width=True, config=graph_config)
-
-# =========================================================
-# RODAPÉ
-# =========================================================
-st.markdown(
-    """
-    <div class="white-card black-text">
-        <div class="small-note">
-            <strong>Correção desta versão:</strong>
-            <ul>
-                <li>O gráfico foi corrigido.</li>
-                <li>O objeto <code>go</code> está corretamente importado como
-                <code>plotly.graph_objects as go</code>.</li>
-                <li>A criação da figura com <code>fig = go.Figure()</code> agora funciona normalmente.</li>
-            </ul>
-        </div>
-    </div>
-    """,
-    unsafe_allow_html=True,
-)
