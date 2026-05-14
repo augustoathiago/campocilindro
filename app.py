@@ -2,7 +2,6 @@ import math
 from pathlib import Path
 
 import numpy as np
-import plotly.graph_objects as go
 import streamlit as st
 import streamlit.components.v1 as components
 
@@ -254,6 +253,19 @@ with col_title:
     st.markdown('<div class="main-title">Simulador Campo Elétrico Cilindro</div>', unsafe_allow_html=True)
     st.markdown('<div class="main-subtitle">Estude o campo elétrico de um cilindro longo.</div>', unsafe_allow_html=True)
 
+st.markdown(
+    """
+    <div class="white-card black-text">
+        <div class="small-note">
+            Nesta versão, consideramos <strong>apenas cilindro isolante</strong>.
+            O simulador usa a <strong>densidade volumétrica de carga ρ</strong>, então o fator
+            <strong>L</strong> cancela no cálculo do campo elétrico pela Lei de Gauss.
+        </div>
+    </div>
+    """,
+    unsafe_allow_html=True,
+)
+
 # =========================================================
 # ESTADO
 # =========================================================
@@ -297,7 +309,16 @@ with p1:
         b = 2.0
         st.session_state.b = 2.0
 
-        # Slider visível, mas desabilitado
+        st.markdown(
+            """
+            <div class="small-note" style="margin-top:0.6rem; margin-bottom:0.35rem;">
+                Como <strong>a = 1,5 m</strong>, o raio externo fica automaticamente fixado em
+                <strong>b = 2,0 m</strong>.
+            </div>
+            """,
+            unsafe_allow_html=True,
+        )
+
         st.slider(
             "Raio externo b do cilindro (m)",
             min_value=0.0,
@@ -588,12 +609,18 @@ st.markdown('<div class="formula-shell">', unsafe_allow_html=True)
 if r >= b:
     st.markdown("**(i) Se a superfície gaussiana estiver fora do cilindro**")
 
+    st.latex(r"\rho=\frac{q_{gauss}}{V_r}")
+
     if abs(a) < 1e-12:
+        st.latex(r"V_r=\pi\,b^2\,L")
+        st.latex(r"\rho=\frac{q_{gauss}}{\pi\,b^2\,L}")
         st.latex(r"q_{gauss}=\rho\,\pi\,b^2\,L")
         st.latex(
             rf"q_{{gauss}}=({to_latex_num(rho_c)})\,\pi\,({to_latex_num(b**2)})\,L"
         )
     else:
+        st.latex(r"V_r=\pi\,(b^2-a^2)\,L")
+        st.latex(r"\rho=\frac{q_{gauss}}{\pi\,(b^2-a^2)\,L}")
         st.latex(r"q_{gauss}=\rho\,\pi\,(b^2-a^2)\,L")
         st.latex(
             rf"q_{{gauss}}=({to_latex_num(rho_c)})\,\pi\,({to_latex_num(b**2)}-{to_latex_num(a**2)})\,L"
@@ -828,10 +855,12 @@ st.markdown(
     """
     <div class="white-card black-text">
         <div class="small-note">
-            <strong>Correção desta versão:</strong>
+            <strong>Melhoria desta versão:</strong>
             <ul>
-                <li>Quando <strong>a = 1,5 m</strong>, o slider de <strong>b</strong> continua visível.</li>
-                <li>Nesse caso, o slider fica <strong>travado em 2,0 m</strong> e desabilitado, para evitar confusão.</li>
+                <li>No caso <strong>(i) superfície gaussiana fora do cilindro</strong>, agora também aparecem:</li>
+                <li>\(\rho = q_{gauss}/V_r\)</li>
+                <li>a fórmula de \(V_r\)</li>
+                <li>e a expressão \(\rho = q_{gauss}/(\text{fórmula de }V_r)\)</li>
             </ul>
         </div>
     </div>
