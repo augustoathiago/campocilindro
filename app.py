@@ -254,19 +254,6 @@ with col_title:
     st.markdown('<div class="main-title">Simulador Campo Elétrico Cilindro</div>', unsafe_allow_html=True)
     st.markdown('<div class="main-subtitle">Estude o campo elétrico de um cilindro longo.</div>', unsafe_allow_html=True)
 
-st.markdown(
-    """
-    <div class="white-card black-text">
-        <div class="small-note">
-            Nesta versão, consideramos <strong>apenas cilindro isolante</strong>.
-            O simulador usa a <strong>densidade volumétrica de carga ρ</strong>, então o fator
-            <strong>L</strong> cancela no cálculo do campo elétrico pela Lei de Gauss.
-        </div>
-    </div>
-    """,
-    unsafe_allow_html=True,
-)
-
 # =========================================================
 # ESTADO
 # =========================================================
