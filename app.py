@@ -252,7 +252,7 @@ with col_logo:
 
 with col_title:
     st.markdown('<div class="main-title">Simulador Campo Elétrico Cilindro</div>', unsafe_allow_html=True)
-    st.markdown('<div class="main-subtitle">Estude o campo elétrico de um cilindro longo.</div>', unsafe_allow_html=True)
+    st.markdown('<div class="main-subtitle">Estude o campo elétrico de um cilindro longo isolante.</div>', unsafe_allow_html=True)
 
 # =========================================================
 # ESTADO
