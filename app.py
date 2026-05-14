@@ -603,11 +603,11 @@ if r >= b:
     )
 
 elif r < a:
-    st.markdown("**(ii) Se a superfície gaussiana estiver na cavidade interna**")
+    st.markdown("**Caso da superfície gaussiana dentro da cavidade do cilindro, sem englobar carga alguma:**")
     st.latex(r"q_{gauss}=0")
 
 else:
-    st.markdown("**(iii) Se a superfície gaussiana estiver no meio da espessura do cilindro isolante**")
+    st.markdown("**Caso da superfície gaussiana entre as superfícies do cilindro, englobando apenas uma parcela da carga:**")
 
     if abs(a) < 1e-12:
         st.latex(r"\rho=\frac{q_{gauss}}{V_r}")
@@ -676,12 +676,10 @@ if r > 0:
         st.latex(rf"E={to_latex_num(E_r)}\ \mathrm{{N/C}}")
 
     elif r < a:
-        st.markdown("**Se a superfície gaussiana estiver na cavidade interna**")
         st.latex(r"q_{gauss}=0")
         st.latex(r"E=0")
 
     else:
-        st.markdown("**Se a superfície gaussiana estiver no meio da espessura do cilindro isolante**")
         st.latex(r"E\,A=\frac{q_{gauss}}{\varepsilon_0}")
 
         if abs(a) < 1e-12:
