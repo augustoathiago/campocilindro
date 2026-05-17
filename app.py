@@ -323,7 +323,7 @@ with p1:
         )
 
     rho_micro = st.slider(
-        "Densidade volumétrica de carga ρ (microC/m³)",
+        "Densidade volumétrica de carga ρ (µC/m³)",
         min_value=-20.0,
         max_value=20.0,
         value=float(st.session_state.rho_micro),
@@ -607,7 +607,7 @@ elif r < a:
     st.latex(r"q_{gauss}=0")
 
 else:
-    st.markdown("**Caso da superfície gaussiana entre as superfícies do cilindro, englobando apenas uma parcela da carga:**")
+    st.markdown("**Caso da superfície gaussiana englobando apenas uma parcela da carga:**")
 
     if abs(a) < 1e-12:
         st.latex(r"\rho=\frac{q_{gauss}}{V_r}")
@@ -709,7 +709,7 @@ if r > 0:
         unsafe_allow_html=True,
     )
 else:
-    st.markdown("Para \(r=0\), o app exibe o campo como 0 por convenção visual no eixo.")
+    st.markdown("Para \(r=0\), o campo elétrico é nulo.")
 
 st.markdown('</div>', unsafe_allow_html=True)
 
